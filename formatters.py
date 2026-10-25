@@ -3,13 +3,29 @@ from datetime import datetime, timedelta, timezone
 UZ_TZ = timezone(timedelta(hours=5))
 
 
+def _to_local(utc_date, fmt):
+    utc_time = datetime.fromisoformat(utc_date.replace("Z", "+00:00"))
+    return utc_time.astimezone(UZ_TZ).strftime(fmt)
+
+
 def format_today(matches):
     if not matches:
         return "Bugun Premier League o'yinlari yo'q."
     lines = ["Bugungi o'yinlar (Toshkent vaqti):\n"]
     for m in matches:
-        utc_time = datetime.fromisoformat(m["utcDate"].replace("Z", "+00:00"))
-        local_time = utc_time.astimezone(UZ_TZ).strftime("%H:%M")
+        local_time = _to_local(m["utcDate"], "%H:%M")
+        home = m["homeTeam"]["shortName"]
+        away = m["awayTeam"]["shortName"]
+        lines.append(f"{local_time}  {home} - {away}")
+    return "\n".join(lines)
+
+
+def format_fixtures(matches):
+    if not matches:
+        return "Keyingi 7 kunda Premier League o'yinlari yo'q."
+    lines = ["Yaqin o'yinlar (Toshkent vaqti):\n"]
+    for m in matches:
+        local_time = _to_local(m["utcDate"], "%d.%m %H:%M")
         home = m["homeTeam"]["shortName"]
         away = m["awayTeam"]["shortName"]
         lines.append(f"{local_time}  {home} - {away}")

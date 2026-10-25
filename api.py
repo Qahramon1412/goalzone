@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import httpx
 
@@ -32,4 +32,11 @@ def get_table():
 def get_today():
     today = date.today().isoformat()
     data = _get(f"/competitions/PL/matches?dateFrom={today}&dateTo={today}")
+    return data["matches"]
+
+
+def get_fixtures(days=7):
+    start = (date.today() + timedelta(days=1)).isoformat()
+    end = (date.today() + timedelta(days=days)).isoformat()
+    data = _get(f"/competitions/PL/matches?dateFrom={start}&dateTo={end}")
     return data["matches"]

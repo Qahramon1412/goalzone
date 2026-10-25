@@ -1,4 +1,4 @@
-from formatters import format_table, format_today
+from formatters import format_fixtures, format_table, format_today
 
 
 def test_format_today_empty():
@@ -30,3 +30,17 @@ def test_format_table_row():
     assert result.startswith("<pre>")
     assert " 1  MCI   8   21" in result
 
+
+def test_format_fixtures_empty():
+    assert "yo'q" in format_fixtures([])
+
+
+def test_format_fixtures_shows_date_and_local_time():
+    matches = [
+        {
+            "utcDate": "2026-10-31T14:00:00Z",
+            "homeTeam": {"shortName": "Arsenal"},
+            "awayTeam": {"shortName": "Chelsea"},
+        }
+    ]
+    assert "31.10 19:00  Arsenal - Chelsea" in format_fixtures(matches)

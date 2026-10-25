@@ -5,14 +5,15 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 import api
 from config import TELEGRAM_BOT_TOKEN, check_config
-from formatters import format_table, format_today
+from formatters import format_fixtures, format_table, format_today
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "GoalZone botiga xush kelibsiz! ⚽\n\n"
         "/today - bugungi Premier League o'yinlari\n"
-        "/table - Premier League jadvali"
+        "/table - Premier League jadvali\n"
+        "/fixtures - keyingi 7 kunlik o'yinlar"
     )
 
 
@@ -34,12 +35,22 @@ async def table(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(format_table(rows), parse_mode="HTML")
 
 
+async def fixtures(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        matches = await asyncio.to_thread(api.get_fixtures)
+    except api.APIError as e:
+        await update.message.reply_text(str(e))
+        return
+    await update.message.reply_text(format_fixtures(matches))
+
+
 def main():
     check_config()
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("today", today))
     app.add_handler(CommandHandler("table", table))
+    app.add_handler(CommandHandler("fixtures", fixtures))
     app.run_polling()
 
 
