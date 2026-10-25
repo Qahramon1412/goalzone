@@ -1,13 +1,11 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
 
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 import api
 from config import TELEGRAM_BOT_TOKEN, check_config
-
-UZ_TZ = timezone(timedelta(hours=5))
+from formatters import format_table, format_today
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -24,17 +22,7 @@ async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except api.APIError as e:
         await update.message.reply_text(str(e))
         return
-    if not matches:
-        await update.message.reply_text("Bugun Premier League o'yinlari yo'q.")
-        return
-    lines = ["Bugungi o'yinlar (Toshkent vaqti):\n"]
-    for m in matches:
-        utc_time = datetime.fromisoformat(m["utcDate"].replace("Z", "+00:00"))
-        local_time = utc_time.astimezone(UZ_TZ).strftime("%H:%M")
-        home = m["homeTeam"]["shortName"]
-        away = m["awayTeam"]["shortName"]
-        lines.append(f"{local_time}  {home} - {away}")
-    await update.message.reply_text("\n".join(lines))
+    await update.message.reply_text(format_today(matches))
 
 
 async def table(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -43,13 +31,7 @@ async def table(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except api.APIError as e:
         await update.message.reply_text(str(e))
         return
-    lines = [" #  Jamoa  O'  Och"]
-    for r in rows:
-        lines.append(
-            f"{r['position']:>2}  {r['team']['tla']}  {r['playedGames']:>2}  {r['points']:>3}"
-        )
-    text = "<pre>" + "\n".join(lines) + "</pre>"
-    await update.message.reply_text(text, parse_mode="HTML")
+    await update.message.reply_text(format_table(rows), parse_mode="HTML")
 
 
 def main():
