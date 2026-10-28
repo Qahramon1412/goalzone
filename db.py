@@ -26,3 +26,11 @@ def get_user(telegram_id):
             (telegram_id,),
         ).fetchone()
     return row
+
+
+def set_favorite_team(telegram_id, team):
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE users SET favorite_team = %s WHERE telegram_id = %s",
+            (team, telegram_id),
+        )
