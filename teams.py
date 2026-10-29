@@ -9,3 +9,12 @@ def find_team(rows, query):
         if q in names:
             return t["shortName"]
     return None
+
+
+def filter_matches(matches, team):
+    """Faqat berilgan jamoa qatnashgan o'yinlarni qaytaradi."""
+    return [
+        m
+        for m in matches
+        if team in (m["homeTeam"]["shortName"], m["awayTeam"]["shortName"])
+    ]

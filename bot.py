@@ -9,7 +9,7 @@ import api
 import db
 from config import TELEGRAM_BOT_TOKEN, check_config
 from formatters import format_fixtures, format_table, format_today
-from teams import find_team
+from teams import filter_matches, find_team
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/today - bugungi Premier League o'yinlari\n"
         "/table - Premier League jadvali\n"
         "/fixtures - keyingi 7 kunlik o'yinlar\n"
-        "/favorite - sevimli jamoani tanlash (masalan: /favorite Arsenal)"
+        "/favorite - sevimli jamoani tanlash (masalan: /favorite Arsenal)\n"
+        "/my - sevimli jamoangizning yaqin o'yinlari"
     )
 
 
@@ -88,6 +89,37 @@ async def favorite(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Sevimli jamoangiz: {team} ✅")
 
 
+async def my(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    try:
+        row = await asyncio.to_thread(db.get_user, user.id)
+    except psycopg.Error:
+        logger.exception("Foydalanuvchini o'qib bo'lmadi")
+        await update.message.reply_text(
+            "Hozir ma'lumotlar bazasiga ulanib bo'lmadi. Keyinroq urinib ko'ring."
+        )
+        return
+    if row is None or row[2] is None:
+        await update.message.reply_text(
+            "Avval sevimli jamoani tanlang. Masalan: /favorite Arsenal"
+        )
+        return
+    team = row[2]
+    try:
+        today_matches = await asyncio.to_thread(api.get_today)
+        upcoming = await asyncio.to_thread(api.get_fixtures)
+    except api.APIError as e:
+        await update.message.reply_text(str(e))
+        return
+    team_matches = filter_matches(today_matches + upcoming, team)
+    if not team_matches:
+        await update.message.reply_text(
+            f"{team} ning keyingi 7 kunda Premier League o'yini yo'q."
+        )
+        return
+    await update.message.reply_text(format_fixtures(team_matches))
+
+
 def main():
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -101,6 +133,7 @@ def main():
     app.add_handler(CommandHandler("table", table))
     app.add_handler(CommandHandler("fixtures", fixtures))
     app.add_handler(CommandHandler("favorite", favorite))
+    app.add_handler(CommandHandler("my", my))
     app.run_polling()
 
 

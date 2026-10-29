@@ -1,4 +1,4 @@
-from teams import find_team
+from teams import filter_matches, find_team
 
 ROWS = [
     {"team": {"name": "Arsenal FC", "shortName": "Arsenal", "tla": "ARS"}},
@@ -24,3 +24,20 @@ def test_find_team_unknown():
 
 def test_find_team_empty():
     assert find_team(ROWS, "   ") is None
+
+
+def test_filter_matches_home_and_away():
+    matches = [
+        {"homeTeam": {"shortName": "Arsenal"}, "awayTeam": {"shortName": "Chelsea"}},
+        {"homeTeam": {"shortName": "Everton"}, "awayTeam": {"shortName": "Arsenal"}},
+        {"homeTeam": {"shortName": "Fulham"}, "awayTeam": {"shortName": "Brentford"}},
+    ]
+    result = filter_matches(matches, "Arsenal")
+    assert len(result) == 2
+
+
+def test_filter_matches_none():
+    matches = [
+        {"homeTeam": {"shortName": "Fulham"}, "awayTeam": {"shortName": "Brentford"}},
+    ]
+    assert filter_matches(matches, "Arsenal") == []
