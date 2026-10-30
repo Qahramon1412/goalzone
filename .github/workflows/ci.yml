@@ -34,3 +34,17 @@ jobs:
           python-version: "3.14"
       - run: pip install pip-audit
       - run: pip-audit -r requirements.txt
+
+  image-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t goalzone-bot:ci .
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: goalzone-bot:ci
+          version: v0.69.3
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
