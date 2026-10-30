@@ -4,7 +4,7 @@ UZ_TZ = timezone(timedelta(hours=5))
 
 
 def _to_local(utc_date, fmt):
-    utc_time = datetime.fromisoformat(utc_date.replace("Z", "+00:00"))
+    utc_time = datetime.fromisoformat(utc_date)
     return utc_time.astimezone(UZ_TZ).strftime(fmt)
 
 
