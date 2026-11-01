@@ -14,4 +14,7 @@ COPY *.py ./
 
 USER appuser
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD python -c "import os,sys,time; sys.exit(0 if time.time()-os.path.getmtime('/tmp/heartbeat') < 180 else 1)"
+
 CMD ["python", "bot.py"]

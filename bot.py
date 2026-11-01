@@ -9,6 +9,7 @@ import api
 import db
 from config import TELEGRAM_BOT_TOKEN, check_config
 from formatters import format_fixtures, format_table, format_today
+from health import heartbeat
 from teams import filter_matches, find_team
 
 logger = logging.getLogger(__name__)
@@ -120,6 +121,10 @@ async def my(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(format_fixtures(team_matches))
 
 
+async def post_init(app):
+    app.bot_data["heartbeat_task"] = asyncio.create_task(heartbeat(app.bot))
+
+
 def main():
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -127,7 +132,7 @@ def main():
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
     check_config()
-    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("today", today))
     app.add_handler(CommandHandler("table", table))
