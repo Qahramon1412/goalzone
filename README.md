@@ -67,6 +67,41 @@ Every push and pull request runs three jobs:
 - **dependency-audit**: `pip-audit` on `requirements.txt`. It also runs every Monday, because new vulnerabilities appear after a release.
 - **image-scan**: builds the Docker image and scans it with Trivy (HIGH and CRITICAL, fixable issues only).
 
+## Operations
+
+Everything below runs locally with Docker Compose.
+
+```bash
+docker compose up -d --build   # start (or rebuild and start)
+docker compose ps              # status and health
+docker compose logs -f bot     # follow bot logs
+docker compose down            # stop, data is kept
+```
+
+Never run `docker compose down -v` unless you want to delete the database volume.
+
+**Restart and health.** Containers use `restart: unless-stopped`, so they come back after a crash and after Docker or WSL restarts. They do not come back after a manual `docker stop` or `docker kill`. The bot container has a `HEALTHCHECK`: the bot calls Telegram `get_me()` every 60 seconds and touches `/tmp/heartbeat`, and the check fails if that file is older than 180 seconds. Compose only marks such a container `unhealthy`, it does not restart it.
+
+**Logs.** Docker keeps at most 3 files of 10 MB per container.
+
+**Backups.** `scripts/backup.sh` runs `pg_dump`, checks that the dump is complete, and keeps the 7 newest files in `~/backups/goalzone`. A systemd timer runs it daily at 03:30:
+
+```bash
+sudo cp deploy/systemd/goalzone-backup.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now goalzone-backup.timer
+```
+
+Restore a dump (test it on a scratch database first):
+
+```bash
+docker compose exec -T db sh -c 'createdb -U "$POSTGRES_USER" restore_test'
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d restore_test' < ~/backups/goalzone/<file>.sql
+docker compose exec -T db sh -c 'dropdb -U "$POSTGRES_USER" restore_test'
+```
+
+The `systemd` unit has the project path and user name written in, so edit `deploy/systemd/goalzone-backup.service` before installing it on another machine.
+
 ## Security notes
 
 - Secrets live only in `.env`, which is git-ignored and excluded from the Docker image by `.dockerignore`. The `.env.example` file lists variable names only.
@@ -82,6 +117,7 @@ Every push and pull request runs three jobs:
 - The cache is in memory and is lost when the bot restarts.
 - No database migrations: `schema.sql` is applied only when the database volume is created.
 - The bot is not hosted 24/7. It runs locally with Docker Compose.
+- Database backups are stored on the same disk as the data. Copy them elsewhere for real protection.
 
 ## Project layout
 
@@ -103,5 +139,5 @@ Every push and pull request runs three jobs:
 - [x] Modules, tests, `/fixtures`, in-memory cache
 - [x] PostgreSQL: users and favorite team
 - [x] Docker, Docker Compose, CI with lint, tests and security scans
-- [ ] Deployment practice on a Linux VM (systemd, logs, health check)
+- [x] Local operations practice: restart policy, health check, log limits, backups with a systemd timer
 - [ ] Prometheus and Grafana monitoring
