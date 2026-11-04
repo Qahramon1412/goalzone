@@ -10,6 +10,7 @@ import db
 from config import TELEGRAM_BOT_TOKEN, check_config
 from formatters import format_fixtures, format_table, format_today
 from health import heartbeat
+from metrics import start_metrics_server, track
 from teams import filter_matches, find_team
 
 logger = logging.getLogger(__name__)
@@ -132,13 +133,14 @@ def main():
     )
     logging.getLogger("httpx").setLevel(logging.WARNING)
     check_config()
+    start_metrics_server()
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).post_init(post_init).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("today", today))
-    app.add_handler(CommandHandler("table", table))
-    app.add_handler(CommandHandler("fixtures", fixtures))
-    app.add_handler(CommandHandler("favorite", favorite))
-    app.add_handler(CommandHandler("my", my))
+    app.add_handler(CommandHandler("start", track("start")(start)))
+    app.add_handler(CommandHandler("today", track("today")(today)))
+    app.add_handler(CommandHandler("table", track("table")(table)))
+    app.add_handler(CommandHandler("fixtures", track("fixtures")(fixtures)))
+    app.add_handler(CommandHandler("favorite", track("favorite")(favorite)))
+    app.add_handler(CommandHandler("my", track("my")(my)))
     app.run_polling()
 
 

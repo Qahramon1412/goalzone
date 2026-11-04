@@ -34,3 +34,29 @@ def test_rate_limit_raises_api_error(monkeypatch):
     with pytest.raises(api.APIError) as exc:
         api.get_table()
     assert "limiti" in str(exc.value)
+
+
+def _count(result):
+    from prometheus_client import REGISTRY
+
+    value = REGISTRY.get_sample_value("goalzone_api_requests_total", {"result": result})
+    return value or 0
+
+
+def test_metrics_count_ok_and_cache_hit(monkeypatch):
+    api._cache.clear()
+    monkeypatch.setattr(api.httpx, "get", lambda *a, **k: FakeResponse())
+    ok_before, hit_before = _count("ok"), _count("cache_hit")
+    api.get_table()
+    api.get_table()
+    assert _count("ok") == ok_before + 1
+    assert _count("cache_hit") == hit_before + 1
+
+
+def test_metrics_count_rate_limited(monkeypatch):
+    api._cache.clear()
+    monkeypatch.setattr(api.httpx, "get", lambda *a, **k: LimitedResponse())
+    before = _count("rate_limited")
+    with pytest.raises(api.APIError):
+        api.get_table()
+    assert _count("rate_limited") == before + 1
