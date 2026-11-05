@@ -25,9 +25,10 @@ flowchart LR
     T <--> B[Bot container]
     B -->|HTTPS, 60 s cache| F[football-data.org]
     B <--> D[(PostgreSQL)]
+    P[Prometheus] -->|scrapes /metrics| B
 ```
 
-The bot and the database run as two containers in Docker Compose. The database port is not published to the host, only the bot can reach it over the internal network.
+The bot, the database and Prometheus run as three containers in Docker Compose. The database port is not published to the host, only the bot can reach it over the internal network.
 
 ## Quick start (Docker Compose)
 
@@ -63,7 +64,7 @@ Running the bot outside Docker needs a local PostgreSQL with the schema from `sc
 
 Every push and pull request runs three jobs:
 
-- **test**: `ruff` lint and format check, then `pytest` (14 tests, no network or secrets needed).
+- **test**: `ruff` lint and format check, then `pytest` (no network or secrets needed).
 - **dependency-audit**: `pip-audit` on `requirements.txt`. It also runs every Monday, because new vulnerabilities appear after a release.
 - **image-scan**: builds the Docker image and scans it with Trivy (HIGH and CRITICAL, fixable issues only).
 
@@ -102,6 +103,26 @@ docker compose exec -T db sh -c 'dropdb -U "$POSTGRES_USER" restore_test'
 
 The `systemd` unit has the project path and user name written in, so edit `deploy/systemd/goalzone-backup.service` before installing it on another machine.
 
+## Monitoring
+
+The bot exposes Prometheus metrics on port 8000 inside the Compose network. That port is not published to the host. Prometheus scrapes it every 15 seconds and is published only on `127.0.0.1:9090`. Its web UI has no authentication, so do not expose it to other machines.
+
+| Metric | Type | Meaning |
+|---|---|---|
+| `goalzone_commands_total{command}` | counter | Handled bot commands |
+| `goalzone_api_requests_total{result}` | counter | football-data.org requests: `ok`, `cache_hit`, `rate_limited`, `error` |
+| `goalzone_last_heartbeat_timestamp_seconds` | gauge | Last successful Telegram check |
+
+Alert rules live in `prometheus/alerts.yml`:
+
+- `BotDown`: Prometheus cannot scrape the bot for 1 minute.
+- `BotHeartbeatStale`: the bot is running, but has not reached Telegram for more than 3 minutes.
+- `ApiRateLimited`: football-data.org returned HTTP 429 in the last 5 minutes.
+
+Open `http://127.0.0.1:9090/alerts` to see them. I tested `BotDown` by stopping the bot container.
+
+There is no Alertmanager, so alerts are not sent by email or Telegram, and there is no Grafana dashboard. The Prometheus query page is enough for this project. The Prometheus image is pinned to the v3.13.5 LTS release.
+
 ## Security notes
 
 - Secrets live only in `.env`, which is git-ignored and excluded from the Docker image by `.dockerignore`. The `.env.example` file lists variable names only.
@@ -129,9 +150,13 @@ The `systemd` unit has the project path and user name written in, so edit `deplo
 | `teams.py` | Team lookup and match filtering |
 | `formatters.py` | Message text and UTC to Tashkent time conversion |
 | `config.py` | Reads settings from environment variables |
+| `metrics.py` | Prometheus counters and gauge |
+| `health.py` | Heartbeat used by the Docker health check |
 | `schema.sql` | Database schema |
 | `Dockerfile`, `docker-compose.yml` | Container setup |
 | `tests/` | Pytest tests |
+| `scripts/`, `deploy/systemd/` | Backup script and its systemd timer |
+| `prometheus/` | Prometheus config and alert rules |
 
 ## Roadmap
 
@@ -140,4 +165,4 @@ The `systemd` unit has the project path and user name written in, so edit `deplo
 - [x] PostgreSQL: users and favorite team
 - [x] Docker, Docker Compose, CI with lint, tests and security scans
 - [x] Local operations practice: restart policy, health check, log limits, backups with a systemd timer
-- [ ] Prometheus and Grafana monitoring
+- [x] Prometheus metrics and alert rules (no Grafana, no Alertmanager)
