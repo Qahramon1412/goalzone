@@ -1,0 +1,25 @@
+groups:
+  - name: goalzone
+    rules:
+      - alert: BotDown
+        expr: up{job="goalzone-bot"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "GoalZone bot metrics endpoint is not reachable"
+
+      - alert: BotHeartbeatStale
+        expr: time() - goalzone_last_heartbeat_timestamp_seconds > 180
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Bot has not reached Telegram for more than 3 minutes"
+
+      - alert: ApiRateLimited
+        expr: increase(goalzone_api_requests_total{result="rate_limited"}[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "football-data.org rate limit was hit in the last 5 minutes"

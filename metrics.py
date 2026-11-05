@@ -30,3 +30,11 @@ def track(command):
 
 def start_metrics_server(port=8000):
     start_http_server(port)
+
+
+# Hisoblagichlarni nol bilan oldindan e'lon qilamiz, shunda ular
+# birinchi ishlatilishdan oldin ham Prometheus'da ko'rinadi.
+for _command in ("start", "today", "table", "fixtures", "favorite", "my"):
+    COMMANDS.labels(_command)
+for _result in ("ok", "cache_hit", "rate_limited", "error"):
+    API_REQUESTS.labels(_result)

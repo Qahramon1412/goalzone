@@ -24,3 +24,11 @@ def test_track_counts_and_calls_handler():
     assert result == "ok"
     assert calls == [1]
     assert _count("testcmd") == before + 1
+
+
+def test_counters_are_predeclared():
+    for command in ("start", "my"):
+        assert (
+            REGISTRY.get_sample_value("goalzone_commands_total", {"command": command})
+            is not None
+        )
