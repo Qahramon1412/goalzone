@@ -121,7 +121,7 @@ Alert rules live in `prometheus/alerts.yml`:
 
 Open `http://127.0.0.1:9090/alerts` to see them. I tested `BotDown` by stopping the bot container.
 
-There is no Alertmanager, so alerts are not sent by email or Telegram, and there is no Grafana dashboard. The Prometheus query page is enough for this project. The Prometheus image is pinned to the v3.13.5 LTS release.
+There is no Alertmanager, so alerts are not sent by email or Telegram, and there is no Grafana dashboard. The Prometheus query page is enough for this project. The Prometheus image is pinned to v3.16.0. It is not an LTS release: v3.13.5 (LTS) shipped a gRPC library with a known HIGH vulnerability (CVE-2026-84445), and v3.16.0 scanned clean with Trivy, so Dependabot updates must be reviewed regularly.
 
 ## Security notes
 
